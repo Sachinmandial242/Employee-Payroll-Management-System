@@ -1,0 +1,767 @@
+cells:
+  - kind: 2
+    value: "\r
+
+      SET SERVEROUTPUT ON;\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- EMPLOYEE PAYROLL MANAGEMENT SYSTEM\r
+
+      -- ==========================================\r
+
+      \r
+
+      -- 1. EMPLOYEE TABLE\r
+
+      \r
+
+      CREATE TABLE EMPLOYEE (\r
+
+      \    EMP_ID NUMBER PRIMARY KEY,\r
+
+      \    EMP_NAME VARCHAR2(100) NOT NULL,\r
+
+      \    DEPARTMENT VARCHAR2(50),\r
+
+      \    DESIGNATION VARCHAR2(50),\r
+
+      \    JOIN_DATE DATE,\r
+
+      \    STATUS VARCHAR2(10) DEFAULT 'ACTIVE'\r
+
+      );\r
+
+      \r
+
+      -- 2. SALARY TABLE\r
+
+      \r
+
+      CREATE TABLE SALARY (\r
+
+      \    EMP_ID NUMBER PRIMARY KEY,\r
+
+      \    BASIC_SALARY NUMBER(10,2) NOT NULL,\r
+
+      \    HRA NUMBER(10,2) DEFAULT 0,\r
+
+      \    DA NUMBER(10,2) DEFAULT 0,\r
+
+      \    BONUS NUMBER(10,2) DEFAULT 0,\r
+
+      \    DEDUCTION NUMBER(10,2) DEFAULT 0,\r
+
+      \    LAST_UPDATED DATE DEFAULT SYSDATE,\r
+
+      \    CONSTRAINT FK_SALARY_EMP\r
+
+      \    FOREIGN KEY (EMP_ID) REFERENCES EMPLOYEE(EMP_ID),\r
+
+      \    CONSTRAINT CHK_SALARY\r
+
+      \    CHECK (BASIC_SALARY >= 0 AND HRA >= 0\r
+
+      \    AND DA >= 0 AND BONUS >= 0 AND DEDUCTION >= 0)\r
+
+      );\r
+
+      \r
+
+      -- 3. PAYROLL TABLE\r
+
+      \r
+
+      CREATE TABLE PAYROLL (\r
+
+      \    PAYROLL_ID NUMBER PRIMARY KEY,\r
+
+      \    EMP_ID NUMBER,\r
+
+      \    PAY_MONTH VARCHAR2(20),\r
+
+      \    PAY_YEAR NUMBER,\r
+
+      \    GROSS_SALARY NUMBER(10,2),\r
+
+      \    NET_SALARY NUMBER(10,2),\r
+
+      \    GENERATED_ON DATE DEFAULT SYSDATE,\r
+
+      \    CONSTRAINT FK_PAYROLL_EMP\r
+
+      \    FOREIGN KEY (EMP_ID) REFERENCES EMPLOYEE(EMP_ID),\r
+
+      \    CONSTRAINT UK_EMP_PAYROLL\r
+
+      \    UNIQUE (EMP_ID, PAY_MONTH, PAY_YEAR)\r
+
+      );\r
+
+      \r
+
+      -- 4. CREATE SEQUENCE\r
+
+      \r
+
+      CREATE SEQUENCE PAYROLL_SEQ\r
+
+      START WITH 1\r
+
+      INCREMENT BY 1;\r
+
+      \r
+
+      -- 5. PAYROLL ID TRIGGER\r
+
+      \r
+
+      CREATE OR REPLACE TRIGGER TRG_PAYROLL_ID\r
+
+      BEFORE INSERT ON PAYROLL\r
+
+      FOR EACH ROW\r
+
+      BEGIN\r
+
+      \    IF :NEW.PAYROLL_ID IS NULL THEN\r
+
+      \        :NEW.PAYROLL_ID := PAYROLL_SEQ.NEXTVAL;\r
+
+      \    END IF;\r
+
+      END;\r
+
+      /\r
+
+      \r
+
+      -- 6. SALARY UPDATE TRIGGER\r
+
+      \r
+
+      CREATE OR REPLACE TRIGGER TRG_SALARY_UPDATE\r
+
+      BEFORE INSERT OR UPDATE ON SALARY\r
+
+      FOR EACH ROW\r
+
+      BEGIN\r
+
+      \    :NEW.LAST_UPDATED := SYSDATE;\r
+
+      END;\r
+
+      /\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 7. INSERT EMPLOYEE RECORDS\r
+
+      -- ==========================================\r
+
+      \r
+
+      INSERT INTO EMPLOYEE VALUES\r
+
+      (101,'Rahul Sharma','IT','Developer',\r
+
+      DATE '2025-01-10','ACTIVE');\r
+
+      \r
+
+      INSERT INTO EMPLOYEE VALUES\r
+
+      (102,'Aman Verma','HR','HR Manager',\r
+
+      DATE '2024-05-15','ACTIVE');\r
+
+      \r
+
+      INSERT INTO EMPLOYEE VALUES\r
+
+      (103,'Priya Singh','Finance','Accountant',\r
+
+      DATE '2025-03-20','ACTIVE');\r
+
+      \r
+
+      INSERT INTO EMPLOYEE VALUES\r
+
+      (104,'Rohit Kumar','IT','Tester',\r
+
+      DATE '2024-08-12','ACTIVE');\r
+
+      \r
+
+      INSERT INTO EMPLOYEE VALUES\r
+
+      (105,'Neha Sharma','Sales','Sales Executive',\r
+
+      DATE '2025-06-01','ACTIVE');\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 8. INSERT SALARY RECORDS\r
+
+      -- ==========================================\r
+
+      \r
+
+      INSERT INTO SALARY\r
+
+      (EMP_ID,BASIC_SALARY,HRA,DA,BONUS,DEDUCTION)\r
+
+      VALUES (101,30000,5000,3000,2000,1000);\r
+
+      \r
+
+      INSERT INTO SALARY\r
+
+      VALUES (102,40000,7000,4000,3000,1500,SYSDATE);\r
+
+      \r
+
+      INSERT INTO SALARY\r
+
+      VALUES (103,28000,4000,2500,1500,800,SYSDATE);\r
+
+      \r
+
+      INSERT INTO SALARY\r
+
+      VALUES (104,25000,3500,2000,1000,500,SYSDATE);\r
+
+      \r
+
+      INSERT INTO SALARY\r
+
+      VALUES (105,22000,3000,1800,1200,400,SYSDATE);\r
+
+      \r
+
+      COMMIT;\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 9. PROCEDURE: ADD EMPLOYEE\r
+
+      -- ==========================================\r
+
+      \r
+
+      CREATE OR REPLACE PROCEDURE ADD_EMPLOYEE(\r
+
+      \    P_ID NUMBER,\r
+
+      \    P_NAME VARCHAR2,\r
+
+      \    P_DEPT VARCHAR2,\r
+
+      \    P_DESIGNATION VARCHAR2,\r
+
+      \    P_DATE DATE\r
+
+      )\r
+
+      AS\r
+
+      BEGIN\r
+
+      \    INSERT INTO EMPLOYEE\r
+
+      \    VALUES (P_ID,P_NAME,P_DEPT,P_DESIGNATION,P_DATE,'ACTIVE');\r
+
+      \r
+
+      \    DBMS_OUTPUT.PUT_LINE('Employee Added Successfully');\r
+
+      \r
+
+      EXCEPTION\r
+
+      \    WHEN DUP_VAL_ON_INDEX THEN\r
+
+      \        DBMS_OUTPUT.PUT_LINE('Employee ID Already Exists');\r
+
+      END;\r
+
+      /\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 10. PROCEDURE: UPDATE SALARY\r
+
+      -- ==========================================\r
+
+      \r
+
+      CREATE OR REPLACE PROCEDURE UPDATE_SALARY(\r
+
+      \    P_ID NUMBER,\r
+
+      \    P_BASIC NUMBER,\r
+
+      \    P_HRA NUMBER,\r
+
+      \    P_DA NUMBER,\r
+
+      \    P_BONUS NUMBER,\r
+
+      \    P_DEDUCTION NUMBER\r
+
+      )\r
+
+      AS\r
+
+      BEGIN\r
+
+      \    UPDATE SALARY\r
+
+      \    SET BASIC_SALARY = P_BASIC,\r
+
+      \        HRA = P_HRA,\r
+
+      \        DA = P_DA,\r
+
+      \        BONUS = P_BONUS,\r
+
+      \        DEDUCTION = P_DEDUCTION\r
+
+      \    WHERE EMP_ID = P_ID;\r
+
+      \r
+
+      \    IF SQL%ROWCOUNT = 0 THEN\r
+
+      \        RAISE_APPLICATION_ERROR(-20001,'Employee Salary Not Found');\r
+
+      \    END IF;\r
+
+      \r
+
+      \    DBMS_OUTPUT.PUT_LINE('Salary Updated Successfully');\r
+
+      \r
+
+      END;\r
+
+      /\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 11. FUNCTION: CALCULATE NET SALARY\r
+
+      -- ==========================================\r
+
+      \r
+
+      CREATE OR REPLACE FUNCTION CALCULATE_NET_SALARY(\r
+
+      \    P_ID NUMBER\r
+
+      )\r
+
+      RETURN NUMBER\r
+
+      AS\r
+
+      \    V_NET NUMBER(10,2);\r
+
+      BEGIN\r
+
+      \    SELECT BASIC_SALARY + HRA + DA + BONUS - DEDUCTION\r
+
+      \    INTO V_NET\r
+
+      \    FROM SALARY\r
+
+      \    WHERE EMP_ID = P_ID;\r
+
+      \r
+
+      \    RETURN V_NET;\r
+
+      \r
+
+      EXCEPTION\r
+
+      \    WHEN NO_DATA_FOUND THEN\r
+
+      \        RAISE_APPLICATION_ERROR(-20002,'Salary Record Not Found');\r
+
+      END;\r
+
+      /\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 12. PROCEDURE: GENERATE MONTHLY PAYROLL\r
+
+      -- ==========================================\r
+
+      \r
+
+      CREATE OR REPLACE PROCEDURE GENERATE_PAYROLL(\r
+
+      \    P_ID NUMBER,\r
+
+      \    P_MONTH VARCHAR2,\r
+
+      \    P_YEAR NUMBER\r
+
+      )\r
+
+      AS\r
+
+      \    V_BASIC NUMBER;\r
+
+      \    V_HRA NUMBER;\r
+
+      \    V_DA NUMBER;\r
+
+      \    V_BONUS NUMBER;\r
+
+      \    V_DEDUCTION NUMBER;\r
+
+      \    V_GROSS NUMBER;\r
+
+      \    V_NET NUMBER;\r
+
+      BEGIN\r
+
+      \    SELECT BASIC_SALARY,HRA,DA,BONUS,DEDUCTION\r
+
+      \    INTO V_BASIC,V_HRA,V_DA,V_BONUS,V_DEDUCTION\r
+
+      \    FROM SALARY\r
+
+      \    WHERE EMP_ID = P_ID;\r
+
+      \r
+
+      \    V_GROSS := V_BASIC + V_HRA + V_DA + V_BONUS;\r
+
+      \    V_NET := V_GROSS - V_DEDUCTION;\r
+
+      \r
+
+      \    INSERT INTO PAYROLL\r
+
+      \    (PAYROLL_ID,EMP_ID,PAY_MONTH,PAY_YEAR,GROSS_SALARY,NET_SALARY)\r
+
+      \    VALUES\r
+
+      \    (NULL,P_ID,P_MONTH,P_YEAR,V_GROSS,V_NET);\r
+
+      \r
+
+      \    DBMS_OUTPUT.PUT_LINE('Payroll Generated Successfully');\r
+
+      \    DBMS_OUTPUT.PUT_LINE('Gross Salary: ' || V_GROSS);\r
+
+      \    DBMS_OUTPUT.PUT_LINE('Net Salary: ' || V_NET);\r
+
+      \r
+
+      EXCEPTION\r
+
+      \    WHEN NO_DATA_FOUND THEN\r
+
+      \        DBMS_OUTPUT.PUT_LINE('Employee Salary Record Not Found');\r
+
+      \r
+
+      \    WHEN DUP_VAL_ON_INDEX THEN\r
+
+      \        DBMS_OUTPUT.PUT_LINE('Payroll Already Generated For This
+      Month');\r
+
+      \r
+
+      END;\r
+
+      /\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 13. PROCEDURE: DEACTIVATE EMPLOYEE\r
+
+      -- ==========================================\r
+
+      \r
+
+      CREATE OR REPLACE PROCEDURE DEACTIVATE_EMPLOYEE(\r
+
+      \    P_ID NUMBER\r
+
+      )\r
+
+      AS\r
+
+      BEGIN\r
+
+      \    UPDATE EMPLOYEE\r
+
+      \    SET STATUS = 'INACTIVE'\r
+
+      \    WHERE EMP_ID = P_ID;\r
+
+      \r
+
+      \    IF SQL%ROWCOUNT = 0 THEN\r
+
+      \        DBMS_OUTPUT.PUT_LINE('Employee Not Found');\r
+
+      \    ELSE\r
+
+      \        DBMS_OUTPUT.PUT_LINE('Employee Deactivated Successfully');\r
+
+      \    END IF;\r
+
+      END;\r
+
+      /\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 14. CURSOR: DISPLAY PAYROLL REPORT\r
+
+      -- ==========================================\r
+
+      \r
+
+      CREATE OR REPLACE PROCEDURE DISPLAY_PAYROLL_REPORT(\r
+
+      \    P_MONTH VARCHAR2,\r
+
+      \    P_YEAR NUMBER\r
+
+      )\r
+
+      AS\r
+
+      \    CURSOR C_PAYROLL IS\r
+
+      \        SELECT E.EMP_ID,E.EMP_NAME,E.DEPARTMENT,\r
+
+      \               P.GROSS_SALARY,P.NET_SALARY\r
+
+      \        FROM EMPLOYEE E\r
+
+      \        JOIN PAYROLL P\r
+
+      \        ON E.EMP_ID = P.EMP_ID\r
+
+      \        WHERE P.PAY_MONTH = P_MONTH\r
+
+      \        AND P.PAY_YEAR = P_YEAR\r
+
+      \        ORDER BY E.EMP_ID;\r
+
+      \r
+
+      \    V_FOUND BOOLEAN := FALSE;\r
+
+      BEGIN\r
+
+      \    DBMS_OUTPUT.PUT_LINE('MONTHLY PAYROLL REPORT');\r
+
+      \    DBMS_OUTPUT.PUT_LINE('-----------------------------');\r
+
+      \r
+
+      \    FOR R IN C_PAYROLL LOOP\r
+
+      \        V_FOUND := TRUE;\r
+
+      \r
+
+      \        DBMS_OUTPUT.PUT_LINE(\r
+
+      \            'ID: ' || R.EMP_ID ||\r
+
+      \            ' Name: ' || R.EMP_NAME ||\r
+
+      \            ' Department: ' || R.DEPARTMENT ||\r
+
+      \            ' Gross: ' || R.GROSS_SALARY ||\r
+
+      \            ' Net: ' || R.NET_SALARY\r
+
+      \        );\r
+
+      \    END LOOP;\r
+
+      \r
+
+      \    IF NOT V_FOUND THEN\r
+
+      \        DBMS_OUTPUT.PUT_LINE('No Payroll Records Found');\r
+
+      \    END IF;\r
+
+      END;\r
+
+      /\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 15. GENERATE PAYROLL FOR 5 EMPLOYEES\r
+
+      -- ==========================================\r
+
+      \r
+
+      BEGIN\r
+
+      \    GENERATE_PAYROLL(101,'October',2026);\r
+
+      \    GENERATE_PAYROLL(102,'October',2026);\r
+
+      \    GENERATE_PAYROLL(103,'October',2026);\r
+
+      \    GENERATE_PAYROLL(104,'October',2026);\r
+
+      \    GENERATE_PAYROLL(105,'October',2026);\r
+
+      END;\r
+
+      /\r
+
+      \r
+
+      COMMIT;\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 16. TEST FUNCTION\r
+
+      -- ==========================================\r
+
+      \r
+
+      SELECT EMP_ID,\r
+
+      \       CALCULATE_NET_SALARY(EMP_ID) AS NET_SALARY\r
+
+      FROM SALARY;\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 17. DISPLAY PAYROLL REPORT\r
+
+      -- ==========================================\r
+
+      \r
+
+      BEGIN\r
+
+      \    DISPLAY_PAYROLL_REPORT('October',2026);\r
+
+      END;\r
+
+      /\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 18. DISPLAY ALL EMPLOYEE RECORDS\r
+
+      -- ==========================================\r
+
+      \r
+
+      SELECT * FROM EMPLOYEE;\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 19. DISPLAY SALARY RECORDS\r
+
+      -- ==========================================\r
+
+      \r
+
+      SELECT * FROM SALARY;\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 20. DISPLAY FINAL PAYROLL\r
+
+      -- ==========================================\r
+
+      \r
+
+      SELECT * FROM PAYROLL;\r
+
+      \r
+
+      -- ==========================================\r
+
+      -- 21. COMPLETE SALARY REPORT\r
+
+      -- ==========================================\r
+
+      \r
+
+      SELECT E.EMP_ID,\r
+
+      \       E.EMP_NAME,\r
+
+      \       E.DEPARTMENT,\r
+
+      \       S.BASIC_SALARY,\r
+
+      \       S.HRA,\r
+
+      \       S.DA,\r
+
+      \       S.BONUS,\r
+
+      \       S.DEDUCTION,\r
+
+      \       P.GROSS_SALARY,\r
+
+      \       P.NET_SALARY,\r
+
+      \       P.PAY_MONTH,\r
+
+      \       P.PAY_YEAR\r
+
+      FROM EMPLOYEE E\r
+
+      JOIN SALARY S ON E.EMP_ID = S.EMP_ID\r
+
+      JOIN PAYROLL P ON E.EMP_ID = P.EMP_ID\r
+
+      ORDER BY E.EMP_ID;\r\n"
+    languageId: oracle-sql
